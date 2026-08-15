@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人理财工作台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo">¥</span>
+      <span class="brand-name">个人理财工作台</span>
+    </div>
+    <div class="market-status" id="marketStatus"></div>
+    <div class="topbar-right">
+      <span class="refresh-info" id="refreshInfo">—</span>
+      <button class="btn btn-ghost" id="btnRefresh" title="立即刷新行情">⟳ 刷新</button>
+      <button class="btn btn-ghost" id="btnReview" title="生成今日复盘">📝 复盘</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- 左侧导航 -->
+    <nav class="sidebar">
+      <div class="nav-item active" data-view="dashboard"><span class="nav-ico">▦</span>今日总览</div>
+      <div class="nav-item" data-view="holdings"><span class="nav-ico">▤</span>我的持仓</div>
+      <div class="nav-item" data-view="news"><span class="nav-ico">❏</span>财经资讯</div>
+      <div class="nav-item" data-view="review"><span class="nav-ico">◧</span>仓位复盘</div>
+      <div class="nav-item" data-view="calendar"><span class="nav-ico">▥</span>事件日历</div>
+      <div class="nav-item" data-view="settings"><span class="nav-ico">⚙</span>设置</div>
+      <div class="nav-foot" id="navFoot">行情源：腾讯/新浪/东方财富</div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="content" id="content"></main>
+  </div>
+
+  <!-- 通用弹窗 -->
+  <div class="modal-mask" id="modalMask" style="display:none">
+    <div class="modal" id="modalBox"></div>
+  </div>
+
+  <div class="toast" id="toast" style="display:none"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/holdings.js"></script>
+  <script src="js/news.js"></script>
+  <script src="js/review.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/*.exe
+build/*.dll
+
+# Logs
+*.log
+install.log
+build.log
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime data
+*.sqlite
+*.db
+.env
+.env.local
+
+# Electron
+out/
+release/
