@@ -117,6 +117,21 @@ npm run dist
 > 打包依赖 `electron-builder`（devDependencies）。NSIS 配置见 `package.json` 的 `build.nsis`。
 > `sql-wasm.wasm` 通过 `extraResources` 随包拷贝，运行时从 `process.resourcesPath` 加载，无需用户干预。
 
+### 6.1 受限 Windows 环境重新打包（本机踩坑记录）
+
+在本机（非提升的 Administrator 进程）重新 `npm run dist` 可能遇到两个阻断，已验证可绕过：
+
+1. **winCodeSign 解压失败：`Cannot create symbolic link : 客户端没有所需的特权`**
+   winCodeSign 压缩包内含 macOS 的 `.dylib` 软链接，本机令牌无 `SeCreateSymbolicLinkPrivilege`，7z 解压中止。
+   - 处理：把 `winCodeSign-2.6.0.7z` 用 7z 解压（软链接会跳过，仅缺 2 个 macOS 文件，Windows 用不到）→ 重新打包成**无软链接**版本 → 用本地 HTTP 服务（如 `python -m http.server`）在 `http://127.0.0.1:8731/` 按 `winCodeSign-2.6.0/winCodeSign-2.6.0.7z` 路径提供 → 设 `ELECTRON_BUILDER_BINARIES_MIRROR=http://127.0.0.1:8731/` 重新打包。
+   - 因重打包改了字节，需把 `node_modules/app-builder-bin/win/**/app-builder.exe` 中记录的 winCodeSign 期望 sha512（等长 88 字符 base64）替换为重打包文件的实际 sha512，否则校验不通过。脚本思路：在二进制里 `indexOf` 原文哈希串并 `fill` 为新哈希串（长度一致即可原地替换）。
+
+2. **国内/受限网络无法拉取 electron-builder 二进制（GitHub 不可达）**
+   - 设 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` 与 `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`（或本机镜像）。
+   - `npm install` 走 `registry.npmmirror.com` 更稳定。
+
+> 静默安装验证请用 PowerShell 传参（`Start-Process setup.exe -ArgumentList "/S","/D=目标路径"`）；在 Git Bash 直接传 `/D=...` 路径可能被 shell 解析导致不落盘。
+
 ### 目录结构
 ```
 finance-workbench/
