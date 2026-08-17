@@ -135,7 +135,9 @@ async function open(userDataDir) {
   db.run('PRAGMA foreign_keys=ON;');
   db.exec(SCHEMA);
   seedDefaults();
-  flushNow();
+  if (!flushNow()) {
+    throw new Error('无法写入数据文件: ' + dbPath);
+  }
   return dbPath;
 }
 
@@ -158,13 +160,15 @@ function markDirty() {
 }
 
 function flushNow() {
-  if (!db || !dbPath) return;
+  if (!db || !dbPath) return false;
   try {
     const data = db.export();
     fs.writeFileSync(dbPath, Buffer.from(data));
     dirty = false;
+    return true;
   } catch (e) {
     console.error('[store] 落盘失败:', e.message);
+    return false;
   }
 }
 

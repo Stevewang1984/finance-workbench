@@ -23,10 +23,16 @@
 3. 勾选「创建桌面快捷方式」「创建开始菜单快捷方式」。
 4. 完成安装后从桌面/开始菜单启动「个人理财工作台」。
 
-> 数据目录：`%APPDATA%\finance-workbench\`
+> 数据目录：`%APPDATA%\finance-workbench\`（默认）
 > - `finance-workbench.sqlite` —— 持仓 / 现金 / 设置 / 汇率 / 复盘 / 事件 / 新闻 等全部数据
 > - `credentials.enc` —— API Key 密文（DPAPI / AES-256-GCM，绝不明文）
 > 数据随应用关闭自动落盘，重开自动恢复，**无需手动备份即可长期使用**。
+
+> **数据目录重定向（节省系统盘空间）**：程序支持把用户数据放到其他盘。
+> - 在可执行文件同目录（如 `D:\FinanceWorkbench\`）放置 `data-dir.txt`，内容为数据目录绝对路径（如 `D:\FinanceWorkbench\data`）；
+> - 或设置环境变量 `FW_DATA_DIR`（优先级更高）。
+> - 生效后 sqlite / 凭据 / Chromium 缓存全部写入该目录，`设置 → 数据路径` 可见。
+> - 注意：若卸载程序（NSIS 会删除整个安装目录），`data-dir.txt` 及其指向的数据目录会一并删除，卸载前请先备份数据。
 
 ---
 

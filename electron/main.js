@@ -7,6 +7,29 @@ const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+/* ---------------- 数据目录重定向（节省 C 盘空间） ---------------- */
+// 支持把用户数据（sqlite / 凭据 / Chromium 缓存）放到其他盘：
+//  1) 环境变量 FW_DATA_DIR（优先）；
+//  2) 可执行文件同目录下的 data-dir.txt，内容为数据目录绝对路径（便于双击启动也生效）。
+// 必须在 app ready 之前设置，否则 Chromium 缓存不会跟随新目录。
+function resolveDataDirOverride() {
+  if (process.env.FW_DATA_DIR && process.env.FW_DATA_DIR.trim()) return process.env.FW_DATA_DIR.trim();
+  try {
+    const f = path.join(path.dirname(process.execPath), 'data-dir.txt');
+    if (fs.existsSync(f)) {
+      const v = fs.readFileSync(f, 'utf8').trim();
+      if (v) return v;
+    }
+  } catch {}
+  return null;
+}
+const _dataDirOverride = resolveDataDirOverride();
+if (_dataDirOverride) {
+  try {
+    app.setPath('userData', _dataDirOverride);
+  } catch {}
+}
+
 const store = require('./lib/store');
 const secure = require('./lib/secure');
 const market = require('./lib/market');
@@ -375,10 +398,14 @@ function registerIpc() {
 app.whenReady().then(async () => {
   const userData = app.getPath('userData');
   try {
-    store.open(userData);
+    // 注意：store.open 是异步的，必须 await，否则 db 尚未就绪
+    // loadSettings() 会立即执行，导致 TypeError 崩溃、窗口永远无法创建。
+    await store.open(userData);
     secure.init(userData, process.type === 'renderer' ? null : (app.isReady() && require('electron').safeStorage));
   } catch (e) {
     dialog.showErrorBox('初始化失败', '数据库或安全存储初始化失败：' + (e.message || e));
+    app.exit(1);
+    return;
   }
   loadSettings();
   firstRunSeed();
