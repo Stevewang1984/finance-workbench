@@ -120,6 +120,53 @@ CREATE TABLE IF NOT EXISTS source_health (
   ok_count INTEGER DEFAULT 0,
   err_count INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS etf_list (
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  market TEXT NOT NULL,
+  currency TEXT NOT NULL,
+  benchmark TEXT,
+  category TEXT DEFAULT 'INDEX',
+  enabled INTEGER DEFAULT 1,
+  added_at TEXT,
+  updated_at TEXT,
+  PRIMARY KEY (market, code)
+);
+
+CREATE TABLE IF NOT EXISTS etf_momentum (
+  code TEXT NOT NULL,
+  date TEXT NOT NULL,
+  price REAL,
+  roc_5d REAL,
+  roc_20d REAL,
+  roc_60d REAL,
+  price_percentile REAL,
+  trend_score REAL,
+  position_score REAL,
+  relative_score REAL,
+  momentum_score REAL,
+  signal TEXT,
+  benchmark_return REAL,
+  relative_return REAL,
+  updated_at TEXT,
+  PRIMARY KEY (code, date)
+);
+
+CREATE TABLE IF NOT EXISTS etf_backtest (
+  id TEXT PRIMARY KEY,
+  etf_code TEXT NOT NULL,
+  params TEXT NOT NULL,
+  start_date TEXT,
+  end_date TEXT,
+  total_return REAL,
+  annual_return REAL,
+  sharpe REAL,
+  max_drawdown REAL,
+  win_rate REAL,
+  trades INTEGER,
+  created_at TEXT
+);
 `;
 
 async function open(userDataDir) {
@@ -247,6 +294,19 @@ const DEFAULT_SETTINGS = {
   tradingEnabled: false,
   firstRunDone: false
 };
+
+const DEFAULT_ETFS = [
+  { market: 'US', code: 'SPY', name: '标普500ETF', currency: 'USD', benchmark: 'US:INX', category: 'INDEX' },
+  { market: 'US', code: 'QQQ', name: '纳指100ETF', currency: 'USD', benchmark: 'US:IXIC', category: 'INDEX' },
+  { market: 'HK', code: '3088', name: '恒生科技ETF', currency: 'HKD', benchmark: 'HK:HSTECH', category: 'INDEX' },
+  { market: 'CN', code: '513050', name: '中概互联ETF', currency: 'CNY', benchmark: 'CN:000001', category: 'SECTOR' },
+  { market: 'US', code: 'GLD', name: '黄金ETF', currency: 'USD', benchmark: null, category: 'COMMODITY' },
+  { market: 'US', code: 'SLV', name: '白银ETF', currency: 'USD', benchmark: null, category: 'COMMODITY' },
+  { market: 'CN', code: '510300', name: '沪深300ETF', currency: 'CNY', benchmark: 'CN:000300', category: 'INDEX' },
+  { market: 'CN', code: '588000', name: '科创50ETF', currency: 'CNY', benchmark: 'CN:000300', category: 'SECTOR' },
+  { market: 'CN', code: '159915', name: '创业板ETF', currency: 'CNY', benchmark: 'CN:399006', category: 'SECTOR' },
+  { market: 'US', code: 'TLT', name: '美国长期国债ETF', currency: 'USD', benchmark: null, category: 'BOND' }
+];
 
 function seedDefaults() {
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
@@ -514,6 +574,84 @@ function listSourceHealth() {
   return all('SELECT * FROM source_health');
 }
 
+/* ---------- ETF 动量相关 ---------- */
+function upsertEtf(etf) {
+  const ts = nowISO();
+  run(
+    `INSERT INTO etf_list(market,code,name,currency,benchmark,category,added_at,updated_at)
+     VALUES(?,?,?,?,?,?,?,?)
+     ON CONFLICT(market,code) DO UPDATE SET
+       name=excluded.name, currency=excluded.currency, benchmark=excluded.benchmark,
+       category=excluded.category, updated_at=excluded.updated_at`,
+    [etf.market, etf.code, etf.name, etf.currency, etf.benchmark || null, etf.category || 'INDEX', ts, ts]
+  );
+}
+function seedEtfDefaults() {
+  for (const etf of DEFAULT_ETFS) {
+    const exist = get('SELECT market FROM etf_list WHERE market=? AND code=?', [etf.market, etf.code]);
+    if (!exist) upsertEtf({ ...etf, added_at: nowISO(), updated_at: nowISO() });
+  }
+}
+function listEtf() {
+  return all('SELECT * FROM etf_list ORDER BY market, code');
+}
+function deleteEtf(market, code) {
+  run('DELETE FROM etf_list WHERE market=? AND code=?', [market, code]);
+}
+function setEtfEnabled(market, code, enabled) {
+  run('UPDATE etf_list SET enabled=?, updated_at=? WHERE market=? AND code=?', [enabled ? 1 : 0, nowISO(), market, code]);
+}
+
+function saveEtfMomentum(row) {
+  run(
+    `INSERT INTO etf_momentum(code,date,price,roc_5d,roc_20d,roc_60d,price_percentile,
+     trend_score,position_score,relative_score,momentum_score,signal,benchmark_return,relative_return,updated_at)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(code,date) DO UPDATE SET
+       price=excluded.price, roc_5d=excluded.roc_5d, roc_20d=excluded.roc_20d, roc_60d=excluded.roc_60d,
+       price_percentile=excluded.price_percentile, trend_score=excluded.trend_score,
+       position_score=excluded.position_score, relative_score=excluded.relative_score,
+       momentum_score=excluded.momentum_score, signal=excluded.signal,
+       benchmark_return=excluded.benchmark_return, relative_return=excluded.relative_return,
+       updated_at=excluded.updated_at`,
+    [row.code, row.date, row.price, row.roc_5d, row.roc_20d, row.roc_60d, row.price_percentile,
+     row.trend_score, row.position_score, row.relative_score, row.momentum_score, row.signal,
+     row.benchmark_return, row.relative_return, nowISO()]
+  );
+}
+function listEtfMomentum(code, limit = 120) {
+  return all('SELECT * FROM etf_momentum WHERE code=? ORDER BY date DESC LIMIT ?', [code, limit]).reverse();
+}
+function latestEtfMomentum(market, code) {
+  return get('SELECT * FROM etf_momentum WHERE code=? ORDER BY date DESC LIMIT 1', [code]);
+}
+function listEtfSignals(dateStr) {
+  const d = dateStr || sessions.beijingNowStr().slice(0, 10);
+  return all(
+    `SELECT e.*, m.momentum_score, m.signal, m.roc_20d, m.price_percentile, m.relative_return
+     FROM etf_list e
+     LEFT JOIN etf_momentum m ON e.code = m.code AND m.date = ?
+     WHERE e.enabled = 1
+     ORDER BY m.momentum_score DESC NULLS LAST`,
+    [d]
+  );
+}
+function listEtfSignalHistory(code, days = 60) {
+  return all('SELECT * FROM etf_momentum WHERE code=? ORDER BY date DESC LIMIT ?', [code, days]).reverse();
+}
+
+function saveBacktest(bt) {
+  run(
+    `INSERT INTO etf_backtest(id,etf_code,params,start_date,end_date,total_return,annual_return,sharpe,max_drawdown,win_rate,trades,created_at)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [bt.id, bt.etfCode, bt.params, bt.startDate, bt.endDate, bt.totalReturn, bt.annualReturn,
+     bt.sharpe, bt.maxDrawdown, bt.winRate, bt.trades, nowISO()]
+  );
+}
+function listBacktests(code, limit = 10) {
+  return all('SELECT * FROM etf_backtest WHERE etf_code=? ORDER BY created_at DESC LIMIT ?', [code, limit]);
+}
+
 function dbInfo() {
   const size = dbPath && fs.existsSync(dbPath) ? fs.statSync(dbPath).size : 0;
   return {
@@ -559,5 +697,18 @@ module.exports = {
   pruneNews,
   recordSourceHealth,
   listSourceHealth,
-  dbInfo
+  dbInfo,
+  DEFAULT_ETFS,
+  seedEtfDefaults,
+  listEtf,
+  upsertEtf,
+  deleteEtf,
+  setEtfEnabled,
+  saveEtfMomentum,
+  listEtfMomentum,
+  latestEtfMomentum,
+  listEtfSignals,
+  listEtfSignalHistory,
+  saveBacktest,
+  listBacktests
 };

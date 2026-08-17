@@ -207,3 +207,81 @@ tbody tr:hover { background: var(--panel-2); }
 .pos-status.real { background: var(--down-soft); color: var(--down); }
 .pos-status.stale { background: var(--warn-soft); color: var(--warn); }
 .pos-status.err { background: var(--up-soft); color: var(--up); }
+
+/* ---------- ETF 动量雷达 ---------- */
+.etf-panel { padding: 0; }
+.etf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px 10px; border-bottom: 1px solid var(--border);
+}
+.etf-header h2 { font-size: 16px; margin: 0; font-weight: 600; }
+
+.etf-summary {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  padding: 14px 18px;
+}
+.summary-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; text-align: center;
+}
+.summary-ico { font-size: 20px; margin-bottom: 4px; }
+.summary-num { font-size: 28px; font-weight: 700; line-height: 1.2; }
+.summary-label { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.buy-card .summary-num { color: var(--up); }
+.sell-card .summary-num { color: var(--down); }
+.hold-card .summary-num { color: var(--accent); }
+.info-card .summary-num { color: var(--text); }
+
+.etf-table-wrap { padding: 0 18px 14px; overflow-x: auto; }
+.etf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.etf-table th {
+  text-align: left; padding: 8px 10px; color: var(--text-dim);
+  border-bottom: 1px solid var(--border); font-weight: 500; white-space: nowrap;
+}
+.etf-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.etf-row.buy td { background: rgba(240,85,106,0.06); }
+.etf-row.sell td { background: rgba(46,194,126,0.06); }
+.etf-row.hold td { background: rgba(59,130,246,0.05); }
+.rank { color: var(--text-faint); font-weight: 600; }
+.code { font-family: "SF Mono", Consolas, monospace; font-weight: 600; }
+.cat { font-size: 11px; color: var(--text-faint); }
+
+.score-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-weight: 700; font-size: 13px;
+}
+.score-badge.buy { background: var(--up-soft); color: var(--up); }
+.score-badge.sell { background: var(--down-soft); color: var(--down); }
+.score-badge.hold { background: var(--accent-soft); color: var(--accent); }
+.score-badge.watch { background: var(--panel-2); color: var(--text-dim); }
+
+.sig { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 12px; padding: 2px 8px; border-radius: 5px; }
+.sig.BUY { background: var(--up-soft); color: var(--up); }
+.sig.SELL { background: var(--down-soft); color: var(--down); }
+.sig.HOLD { background: var(--accent-soft); color: var(--accent); }
+.sig.WATCH { background: var(--panel-2); color: var(--text-dim); }
+
+.btn-sm { padding: 3px 10px; font-size: 12px; }
+
+/* 持仓对照 */
+.etf-holdings-ref { padding: 0 18px 14px; }
+.etf-holdings-title { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; font-weight: 500; }
+.holdings-ref-list { display: flex; flex-direction: column; gap: 6px; }
+.hold-ref-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; font-size: 13px;
+}
+.hold-ref-item.buy { border-left: 3px solid var(--up); }
+.hold-ref-item.sell { border-left: 3px solid var(--down); }
+.hold-ref-item.hold { border-left: 3px solid var(--accent); }
+.hold-ref-item.watch { border-left: 3px solid var(--text-faint); }
+.ref-code { font-family: monospace; font-weight: 700; min-width: 70px; }
+.ref-name { color: var(--text-dim); flex: 1; }
+.ref-action { font-size: 12px; color: var(--text-faint); }
+
+/* 历史表格 */
+.history-table-wrap { max-height: 320px; overflow-y: auto; margin: 10px 0; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.history-table th { position: sticky; top: 0; background: var(--panel); padding: 6px 8px; text-align: left; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+.history-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); }

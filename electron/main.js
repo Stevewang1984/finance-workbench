@@ -33,6 +33,7 @@ if (_dataDirOverride) {
 const store = require('./lib/store');
 const secure = require('./lib/secure');
 const market = require('./lib/market');
+const etfMomentum = require('./lib/etf_momentum');
 const fx = require('./lib/fx');
 const portfolio = require('./lib/portfolio');
 const newsLib = require('./lib/news');
@@ -381,6 +382,39 @@ function registerIpc() {
           return await market.checkFutuOpenD(cfg);
         }
 
+        /* ETF 动量雷达 */
+        case 'etf:list':
+          return store.listEtf();
+        case 'etf:upsert':
+          store.upsertEtf(payload);
+          return { ok: true };
+        case 'etf:delete':
+          store.deleteEtf(payload.market, payload.code);
+          return { ok: true };
+        case 'etf:enabled':
+          store.setEtfEnabled(payload.market, payload.code, payload.enabled);
+          return { ok: true };
+        case 'etf:signals': {
+          const dateStr = payload && payload.date ? payload.date : todayBj();
+          const signals = store.listEtfSignals(dateStr);
+          return signals;
+        }
+        case 'etf:history': {
+          const rows = store.listEtfSignalHistory(payload.code, payload.days || 60);
+          return rows;
+        }
+        case 'etf:momentum:compute': {
+          // 计算并保存今日动量
+          return await etfMomentum.computeAndSave(settings);
+        }
+        case 'etf:backtest': {
+          return await etfMomentum.runBacktest(payload);
+        }
+        case 'etf:backtest:list':
+          return store.listBacktests(payload.code, payload.limit || 10);
+        case 'etf:momentum:latest':
+          return store.latestEtfMomentum(payload.market, payload.code);
+
         /* 导出 / 备份 */
         case 'db:path':
           return store.dbInfo();
@@ -409,6 +443,7 @@ app.whenReady().then(async () => {
   }
   loadSettings();
   firstRunSeed();
+  store.seedEtfDefaults();
   registerIpc();
   createWindow();
   setInterval(checkAutoReview, 60 * 1000);

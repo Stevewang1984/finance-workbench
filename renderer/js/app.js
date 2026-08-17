@@ -7,6 +7,7 @@ window.App = (function () {
     news: window.News,
     review: window.Review,
     calendar: window.Calendar,
+    etf_momentum: window.ETFMomentum,
     settings: window.Settings
   };
   let current = 'dashboard';
